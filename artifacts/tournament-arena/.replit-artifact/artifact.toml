@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "Tournament Arena"
+description = "A mobile-first esports tournament platform for Free Fire and BGMI players to discover tournaments, join slots, view match details, and track leaderboards, with organizer controls for managing competitions."
+version = "1.0.0"
+id = "artifacts/tournament-arena"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 25111
+
+[services.development]
+run = "pnpm --filter @workspace/tournament-arena run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/tournament-arena", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/tournament-arena/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "25111"
+BASE_PATH = "/"

@@ -1,0 +1,319 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: API specification
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: tournaments
+    description: Tournament discovery and management
+  - name: registrations
+    description: Player tournament registrations
+  - name: leaderboard
+    description: Competitive rankings
+  - name: dashboard
+    description: Player dashboard summaries
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      description: Returns server health status
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+  /tournaments:
+    get:
+      operationId: listTournaments
+      tags: [tournaments]
+      summary: List available tournaments
+      parameters:
+        - name: game
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [all, bgmi, free-fire]
+            default: all
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [all, open, live, completed]
+            default: all
+      responses:
+        "200":
+          description: Tournament list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Tournament"
+    post:
+      operationId: createTournament
+      tags: [tournaments]
+      summary: Create a tournament
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TournamentInput"
+      responses:
+        "201":
+          description: Tournament created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Tournament"
+  /tournaments/{id}:
+    get:
+      operationId: getTournament
+      tags: [tournaments]
+      summary: Get tournament details
+      parameters:
+        - $ref: "#/components/parameters/TournamentId"
+      responses:
+        "200":
+          description: Tournament details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Tournament"
+        "404":
+          description: Tournament not found
+    patch:
+      operationId: updateTournament
+      tags: [tournaments]
+      summary: Update tournament details
+      parameters:
+        - $ref: "#/components/parameters/TournamentId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TournamentUpdate"
+      responses:
+        "200":
+          description: Tournament updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Tournament"
+  /tournaments/{id}/join:
+    post:
+      operationId: joinTournament
+      tags: [registrations]
+      summary: Join a tournament with a player identity
+      parameters:
+        - $ref: "#/components/parameters/TournamentId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegistrationInput"
+      responses:
+        "201":
+          description: Registration created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Registration"
+        "400":
+          description: Tournament is full or player is already registered
+  /registrations:
+    get:
+      operationId: listRegistrations
+      tags: [registrations]
+      summary: List registrations for a player
+      parameters:
+        - name: playerTag
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Player registrations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Registration"
+  /leaderboard:
+    get:
+      operationId: listLeaderboard
+      tags: [leaderboard]
+      summary: List leaderboard standings
+      parameters:
+        - name: game
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [all, bgmi, free-fire]
+            default: all
+      responses:
+        "200":
+          description: Leaderboard standings
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LeaderboardEntry"
+  /dashboard/summary:
+    get:
+      operationId: getDashboardSummary
+      tags: [dashboard]
+      summary: Get player dashboard summary
+      parameters:
+        - name: playerTag
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Dashboard summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+components:
+  parameters:
+    TournamentId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+    Tournament:
+      type: object
+      required: [id, title, game, mode, status, startsAt, prizePool, entryFee, slots, filledSlots]
+      properties:
+        id: { type: integer }
+        title: { type: string }
+        game:
+          type: string
+          enum: [bgmi, free-fire]
+        mode:
+          type: string
+          enum: [solo, duo, squad]
+        status:
+          type: string
+          enum: [open, live, completed]
+        startsAt: { type: string, format: date-time }
+        prizePool: { type: integer, minimum: 0 }
+        entryFee: { type: integer, minimum: 0 }
+        slots: { type: integer, minimum: 1 }
+        filledSlots: { type: integer, minimum: 0 }
+        map: { type: string }
+        organizer: { type: string }
+        roomId: { type: ["string", "null"] }
+        roomPassword: { type: ["string", "null"] }
+        description: { type: string }
+    TournamentInput:
+      type: object
+      required: [title, game, mode, startsAt, prizePool, entryFee, slots, map, organizer, description]
+      properties:
+        title: { type: string, minLength: 2 }
+        game:
+          type: string
+          enum: [bgmi, free-fire]
+        mode:
+          type: string
+          enum: [solo, duo, squad]
+        startsAt: { type: string, format: date-time }
+        prizePool: { type: integer, minimum: 0 }
+        entryFee: { type: integer, minimum: 0 }
+        slots: { type: integer, minimum: 1 }
+        map: { type: string, minLength: 2 }
+        organizer: { type: string, minLength: 2 }
+        description: { type: string, minLength: 2 }
+    TournamentUpdate:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [open, live, completed]
+        roomId: { type: ["string", "null"] }
+        roomPassword: { type: ["string", "null"] }
+        filledSlots: { type: integer, minimum: 0 }
+    RegistrationInput:
+      type: object
+      required: [playerTag, playerName]
+      properties:
+        playerTag: { type: string, minLength: 2 }
+        playerName: { type: string, minLength: 2 }
+        teamName: { type: ["string", "null"] }
+    Registration:
+      type: object
+      required: [id, tournamentId, tournamentTitle, playerTag, playerName, teamName, joinedAt, slotNumber, status]
+      properties:
+        id: { type: integer }
+        tournamentId: { type: integer }
+        tournamentTitle: { type: string }
+        playerTag: { type: string }
+        playerName: { type: string }
+        teamName: { type: ["string", "null"] }
+        joinedAt: { type: string, format: date-time }
+        slotNumber: { type: integer }
+        status:
+          type: string
+          enum: [confirmed, cancelled]
+    LeaderboardEntry:
+      type: object
+      required: [rank, playerTag, playerName, game, matches, wins, kills, points, trend]
+      properties:
+        rank: { type: integer }
+        playerTag: { type: string }
+        playerName: { type: string }
+        game:
+          type: string
+          enum: [bgmi, free-fire]
+        matches: { type: integer }
+        wins: { type: integer }
+        kills: { type: integer }
+        points: { type: integer }
+        trend:
+          type: string
+          enum: [up, down, same]
+    DashboardSummary:
+      type: object
+      required: [playerTag, tournamentsJoined, liveMatches, totalPoints, winRate, nextMatch]
+      properties:
+        playerTag: { type: string }
+        tournamentsJoined: { type: integer }
+        liveMatches: { type: integer }
+        totalPoints: { type: integer }
+        winRate: { type: number }
+        nextMatch:
+          anyOf:
+            - $ref: "#/components/schemas/Tournament"
+            - type: "null"
+
